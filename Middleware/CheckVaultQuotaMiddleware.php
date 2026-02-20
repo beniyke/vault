@@ -17,6 +17,7 @@ use Closure;
 use Core\Middleware\MiddlewareInterface;
 use Helpers\Http\Request;
 use Helpers\Http\Response;
+use Helpers\Log;
 use Throwable;
 use Vault\Exceptions\QuotaExceededException;
 use Vault\Services\VaultManagerService;
@@ -54,7 +55,9 @@ class CheckVaultQuotaMiddleware implements MiddlewareInterface
         }
 
         try {
-            if (! $this->vaultManager->canUpload($accountId, $totalSize)) {
+            $can = $this->vaultManager->canUpload((int) $totalSize, $accountId);
+
+            if (! $can) {
                 return $response->json([
                     'error' => 'Storage quota exceeded',
                     'message' => 'Insufficient storage space for this upload'
@@ -66,7 +69,7 @@ class CheckVaultQuotaMiddleware implements MiddlewareInterface
                 'message' => $e->getMessage()
             ], 413);
         } catch (Throwable $e) {
-            logger('vault.log')->error('Vault quota check failed', [
+            Log::channel('vault')->error('Vault quota check failed', [
                 'account_id' => $accountId,
                 'error' => $e->getMessage()
             ]);

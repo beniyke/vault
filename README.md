@@ -2,7 +2,7 @@
 
 # Vault
 
-Vault provides comprehensive storage quota management for SaaS applications. It enables you to allocate storage quotas to accounts, track usage, enforce limits, and manage backups with atomic precision and transaction safety.
+The Vault package delivers an enterprise-grade storage quota management system for the Anchor Framework. It empowers SaaS applications to allocate precise storage quotas, monitor usage in real-time, and enforce strict limits with atomic accuracy and transaction-safe integrity.
 
 ## Architecture
 
@@ -26,7 +26,7 @@ php dock package:install Vault --packages
 This will automatically:
 
 - Publish configuration to `App/Config/`
-- Run core migrations for `vault_*`
+- Run the migration for Vault tables.
 - Register `VaultServiceProvider` and associated facades.
 
 ## Configuration
@@ -292,6 +292,10 @@ The `CheckVaultQuotaMiddleware` protects your application by automatically rejec
 | :------------------------------ | :------------------------------------------------- |
 | `recalculateUsage(?string $id)` | Audits actual disk usage and updates the database. |
 | `getFileCount(?string $id)`     | Returns total number of files tracked for account. |
+
+## Automation
+
+The Vault package performs automated maintenance via the `VaultMaintenanceSchedule`. It runs the `vault:audit` command weekly to ensure disk usage and database records are synchronized.
 
 ## Security & Best Practices
 

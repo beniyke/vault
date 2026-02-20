@@ -19,7 +19,7 @@ class CreateVaultQuotaTable extends BaseMigration
      */
     public function up(): void
     {
-        $this->schema()->create('vault_quota', function ($table) {
+        $this->schema()->createIfNotExists('vault_quota', function ($table) {
             $table->id();
             $table->unsignedBigInteger('account_id');
             $table->string('refid')->unique()->index();

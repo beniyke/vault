@@ -16,7 +16,7 @@ class CreateVaultBackupTable extends BaseMigration
 {
     public function up(): void
     {
-        $this->schema()->create('vault_backup', function ($table) {
+        $this->schema()->createIfNotExists('vault_backup', function ($table) {
             $table->id();
             $table->unsignedBigInteger('account_id');
             $table->string('refid')->unique()->index();

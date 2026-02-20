@@ -23,6 +23,7 @@ use Helpers\File\Adapters\Interfaces\PathResolverInterface;
 use Helpers\String\Str;
 use InvalidArgumentException;
 use RuntimeException;
+use Vault\Exceptions\InvalidQuotaException;
 use Vault\Exceptions\QuotaExceededException;
 use Vault\Exceptions\StorageNotFoundException;
 
@@ -60,14 +61,10 @@ class VaultManagerService
         return $this->fileTracker;
     }
 
-    /**
-     * @return array{used: int, quota: int, remaining: int, percentage: float}
-     *
-     * @throws StorageNotFoundException
-     */
     public function getUsage(?string $accountId = null): array
     {
         $accountId = $accountId ?: $this->accountId;
+
         if (! $accountId) {
             throw new RuntimeException('No account ID provided.');
         }
@@ -87,10 +84,6 @@ class VaultManagerService
         ];
     }
 
-    /**
-     * @throws QuotaExceededException
-     * @throws StorageNotFoundException
-     */
     public function trackUpload(string $filePath, int $bytes, ?string $accountId = null): void
     {
         $accountId = $accountId ?: $this->accountId;
@@ -146,6 +139,19 @@ class VaultManagerService
         }
 
         $quotaMb = $quotaMb ?? config('vault.default_quota_mb', 1024);
+
+        if ($quotaMb < 0) {
+            throw InvalidQuotaException::negative($quotaMb);
+        }
+
+        if ($quotaMb === 0) {
+            throw InvalidQuotaException::zero();
+        }
+
+        $maxQuota = config('vault.max_quota_mb', 512000); // Default 500GB
+        if ($quotaMb > $maxQuota) {
+            throw InvalidQuotaException::exceedsMaximum($quotaMb, $maxQuota);
+        }
         $quotaBytes = $quotaMb * self::MB_TO_BYTES;
 
         DB::table(self::VAULT_TABLE)->updateOrInsert(
@@ -220,7 +226,7 @@ class VaultManagerService
         $totalSize = 0;
 
         if ($this->fileMeta->isDir($storagePath)) {
-            $totalSize = $this->getDirectorySize($storagePath);
+            $totalSize = $this->fileMeta->directorySize($storagePath);
         }
 
         DB::table(self::VAULT_TABLE)
@@ -253,26 +259,6 @@ class VaultManagerService
     public function findDuplicates(string $hash): array
     {
         return $this->fileTracker->findDuplicates($hash);
-    }
-
-    private function getDirectorySize(string $path): int
-    {
-        $size = 0;
-        foreach (scandir($path) as $file) {
-            if ($file === '.' || $file === '..') {
-                continue;
-            }
-
-            $fullPath = $path . DIRECTORY_SEPARATOR . $file;
-
-            if (is_dir($fullPath)) {
-                $size += $this->getDirectorySize($fullPath);
-            } else {
-                $size += filesize($fullPath);
-            }
-        }
-
-        return $size;
     }
 
     private function getQuotaRecord(string $accountId): object
